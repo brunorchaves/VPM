@@ -1,12 +1,23 @@
+/*Bruno Ribeiro Chaves -> Creater
+ * @brief metronome_arduino.c: This is the main firwmare of the vitron metronome
+ *
+ * @note
+ * Copyright(C) Bruno Tecnology
+ * All rights reserved.
+ *
+ *  Authors:
+ *  Bruno Ribeiro (https://github.com/brunorchaves)
+ */
+
 #include "TimerOne.h"
 #include "U8glib.h"
 #define inputCLK 4
 #define inputDT 5
-//Display
-U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);
 
+//**Tip**--> every global variable must be preceeded by a "g"
 //Variáveis motor
 int g_milisecs = 0;
+int g_display = 0;
 int g_motor = 7;
 //int g_led = 3;//Depois ligar um transistor aqui
 //Variáveis encoder
@@ -15,22 +26,22 @@ int currentStateCLK;
 String encdir ="";
 int counter = 1; 
 //
-
-  
+//Display
+U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);
 
 void setup() {
   //Serial Monitor-----------------------------
    Serial.begin (9600);
   // put your setup code here, to run once:
-  Timer1.initialize(1000); // Inicializa o Timer1 e configura para um período de 0,001 segundos
-  Timer1.attachInterrupt(contaMilisegundos); // Configura a função callback() como a função para ser chamada a cada interrupção do Timer1
-  //Motor de vibração
+  Timer1.initialize(1000); // Initialize the Timer1 and configures it to a period of 0,001 secs
+  Timer1.attachInterrupt(contaMilisegundos); // Configura the callback() function to be called in every interrupt of the timer
+  //Vibrationg motor
   pinMode(g_motor, OUTPUT);
   //pinMode(g_led, OUTPUT);
   /// Encoder-----------------------------------
   pinMode (inputCLK,INPUT);
   pinMode (inputDT,INPUT);
-  //Lê o estado inicial do inputClk
+
   previousStateCLK = digitalRead(inputCLK);
   //Display---------------------------------------
   if(u8g.getMode() == U8G_MODE_R3G3B2)
@@ -58,44 +69,44 @@ void contaMilisegundos()
 }
 enum
 {
-	Estado_BPMemMilis = 0,
-	Estado_tempoON,
-	Estado_tempoOFF,
+	State_BPMtoMilis = 0,
+	State_timeON,
+	State_timeOFF,
 };
-void maquina_controlaMotor(int BPM)
+void machineMotorcontrol(int BPM)
 {
-  static float periodo_milis=0;
-  static float tempo_on=0;
-  static int estado =0;
+  static float period_milis=0;
+  static float time_on=0;
+  static int state =0;
 
-  switch(estado)
+  switch(state)
   {
-    case Estado_BPMemMilis:
-      periodo_milis = 60000/BPM;//Período de uma bpm em milissegundos 
-      g_milisecs = 0;//Reseta o timer
-      tempo_on = periodo_milis/2;
-      estado = Estado_tempoON;
+    case State_BPMtoMilis:
+      period_milis = 60000/BPM;//One BPM perido in seconds
+      g_milisecs = 0;//Resets the timer
+      time_on = period_milis/2;
+      state = State_timeON;
       break;
-    case Estado_tempoON:
-      if(g_milisecs <= tempo_on)
+    case State_timeON:
+      if(g_milisecs <= time_on)
       {
         digitalWrite(g_motor,HIGH);
         //digitalWrite(g_led,HIGH);
       }
       else
       {
-        estado = Estado_tempoOFF;
+        state = State_timeOFF;
       }
       break;
-    case Estado_tempoOFF:
-      if(g_milisecs <= periodo_milis)
+    case State_timeOFF:
+      if(g_milisecs <= period_milis)
       {
         digitalWrite(g_motor,LOW);
         //digitalWrite(g_led,LOW);
       }
       else
       {
-        estado = Estado_BPMemMilis;
+        state = State_BPMtoMilis;
       }
       break;
     default:
@@ -160,51 +171,51 @@ void draw(int BPM)
     u8g.drawStr(18, 3, buf);
     ///u8g.drawStr(1,22,BPM);
   } while( u8g.nextPage() );
-  g_display
+
 }
 enum
 {
-	Estado_getBPM = 0,
-	Estado_mudaValorBPM,
+	State_getBPM = 0,
+	State_ChangeBPM,
 };
 void loop() {
   static int BPM = 60;
-  static int estado = 0;
-  static int encoderAtual = 1;
-  static int encoderAnterior = 1;
-  static int contador = 0;
+  static int state = 0;
+  static int currentEncoder = 1;
+  static int previousEncoder = 1;
+  static int counter = 0;
   static int valor_encoder = 1;
-  static bool mexeu = false;
+  static bool move = false;
   
-  encoderAtual = encoder();
+  currentEncoder = encoder();
   
-  contador++;
-  switch(estado)
+  counter++;
+  switch(state)
   {
-    case Estado_getBPM:
-      if(encoderAtual != encoderAnterior)
+    case State_getBPM:
+      if(currentEncoder != previousEncoder)
       {
-        mexeu = true;
-        encoderAnterior = encoderAtual;
-        contador = 0;
+        move = true;
+        previousEncoder = currentEncoder;
+        counter = 0;
       }
-      if(contador >= 15 && mexeu == true)
+      if(counter >= 15 && move == true)
       {
-        valor_encoder = encoderAtual;
-        mexeu = false;
-        estado = Estado_mudaValorBPM;
+        valor_encoder = currentEncoder;
+        move = false;
+        state = State_ChangeBPM;
       }
       break;
-    case Estado_mudaValorBPM:
+    case State_ChangeBPM:
       BPM = valor_encoder;
-      //encoderAnterior = encoderAtual;
-      estado = Estado_getBPM;
+      //previousEncoder = currentEncoder;
+      state = State_getBPM;
       break;
     default:
       break;
   }
  
-  maquina_controlaMotor(BPM);
+  machineMotorcontrol(BPM);
 
   // u8g.firstPage();
   // do
@@ -212,9 +223,9 @@ void loop() {
      draw(BPM);
   // }while(u8g.nextPage());
 
-  Serial.print(encoderAtual);
+  Serial.print(currentEncoder);
   Serial.print(" ");
   Serial.print(BPM);
   Serial.print(" ");
-  Serial.println(contador);
+  Serial.println(counter);
 }
