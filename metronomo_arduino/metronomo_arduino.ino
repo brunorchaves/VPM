@@ -1,4 +1,4 @@
-/*Bruno Ribeiro Chaves -> Creater
+/*Bruno Ribeiro Chaves -> Creator
  * @brief metronome_arduino.c: This is the main firwmare of the vitron metronome
  *
  * @note
@@ -9,64 +9,59 @@
  *  Bruno Ribeiro (https://github.com/brunorchaves)
  */
 
-#include "TimerOne.h"
-#include "U8glib.h"
-#define inputCLK 4
-#define inputDT 5
+#define inputCLK 13
+#define inputDT 12
+//Pins***************
+//Device          ESP
+//Encoder-->      
+//inputCLK        D13
+//inputDT         D12
+//Motor-->        D2
+//Display--> 
+//SCL             D22
+//SDA             D21
 
 //**Tip**--> every global variable must be preceeded by a "g"
-//Variáveis motor
-int g_milisecs = 0;
+//Motor Variables
+
 int g_display = 0;
-int g_motor = 7;
+int g_motor = 5;
 //int g_led = 3;//Depois ligar um transistor aqui
 //Variáveis encoder
 int previousStateCLK;
 int currentStateCLK;
-String encdir ="";
 int counter = 1; 
-//
-//Display
-U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);
+//Timer
+int timerDivider = 1000;
+int g_milisecs = 0;
+hw_timer_t *timer = NULL;
+//portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-void setup() {
+void IRAM_ATTR onTimer()
+{
+  g_milisecs ++;
+  
+}
+
+void setup() 
+{
   //Serial Monitor-----------------------------
-   Serial.begin (9600);
-  // put your setup code here, to run once:
-  Timer1.initialize(1000); // Initialize the Timer1 and configures it to a period of 0,001 secs
-  Timer1.attachInterrupt(contaMilisegundos); // Configura the callback() function to be called in every interrupt of the timer
+  Serial.begin (9600);
+  //Timer
+  timer = timerBegin(0,80,true);//Timer 0, MWDT clock period = 12,5 s * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5ns*80 ->1u sec, countUP 
+  timerAttachInterrupt(timer,&onTimer, true); //edge (not level) triggered
+  timerAlarmWrite(timer, 1000, true);//1000*1us = 1s , autoreload true;
+  timerAlarmEnable(timer);//enable
   //Vibrationg motor
   pinMode(g_motor, OUTPUT);
   //pinMode(g_led, OUTPUT);
   /// Encoder-----------------------------------
   pinMode (inputCLK,INPUT);
   pinMode (inputDT,INPUT);
-
   previousStateCLK = digitalRead(inputCLK);
-  //Display---------------------------------------
-  if(u8g.getMode() == U8G_MODE_R3G3B2)
-  {
-    u8g.setColorIndex(255);
-  }
-  else if(u8g.getMode() == U8G_MODE_GRAY2BIT)
-  {
-    u8g.setColorIndex(3);
-  }
-  else if(u8g.getMode() == U8G_MODE_BW)
-  {
-    u8g.setColorIndex(1);
-  }
-   else if(u8g.getMode() == U8G_MODE_HICOLOR)
-  {
-    u8g.setHiColorByRGB(255,255,255);
-  }
 
 }
-void contaMilisegundos()
-{
-  g_milisecs++;
-  g_display++;
-}
+
 enum
 {
 	State_BPMtoMilis = 0,
@@ -127,7 +122,7 @@ int encoder()
      if (digitalRead(inputDT) != currentStateCLK) 
      { 
        counter --;
-       encdir ="CCW";
+       //encdir ="CCW";
        //digitalWrite(ledCW, LOW);
        //digitalWrite(ledCCW, HIGH);
        
@@ -136,7 +131,7 @@ int encoder()
      {
        // Encoder is rotating clockwise
        counter ++;
-       encdir ="CW";
+      // encdir ="CW";
        //digitalWrite(ledCW, HIGH);
        //digitalWrite(ledCCW, LOW);
      }
@@ -159,20 +154,7 @@ int encoder()
 
   return counter;
 }
-void draw(int BPM)
-{
 
-  do 
-  {
-    u8g.setFont(u8g_font_unifont);
-    //u8g.drawStr(0,22,"BPM: ");
-    char buf[9];
-    sprintf (buf, "%d", BPM);
-    u8g.drawStr(18, 3, buf);
-    ///u8g.drawStr(1,22,BPM);
-  } while( u8g.nextPage() );
-
-}
 enum
 {
 	State_getBPM = 0,
@@ -217,15 +199,11 @@ void loop() {
  
   machineMotorcontrol(BPM);
 
-  // u8g.firstPage();
-  // do
-  // {
-     draw(BPM);
-  // }while(u8g.nextPage());
-
   Serial.print(currentEncoder);
   Serial.print(" ");
   Serial.print(BPM);
   Serial.print(" ");
   Serial.println(counter);
 }
+
+
