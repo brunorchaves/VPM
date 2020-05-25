@@ -1,6 +1,6 @@
 **WORK IN PROGRESS**
 
-# Vitron
+# (V)ibratrions (P)er (M)inute 
 This is ESP32 project consists on create an wearable and haptic arduino metronome similar to SoundBrenner device, but with low cost and  3D printer materials.
 # 3D case design:
  <p align="center"><img src="images/3dcase.PNG"  width="250">
