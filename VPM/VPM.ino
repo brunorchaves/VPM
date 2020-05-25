@@ -34,7 +34,7 @@ GND - to microcontroler GND
 #define ROTARY_ENCODER_VCC_PIN 27 /*put -1 of Rotary encoder Vcc is connected directly to 3,3V; else you can use declared output pin for powering rotary encoder */
 AiEsp32RotaryEncoder rotaryEncoder = AiEsp32RotaryEncoder(ROTARY_ENCODER_A_PIN, ROTARY_ENCODER_B_PIN, ROTARY_ENCODER_BUTTON_PIN, ROTARY_ENCODER_VCC_PIN);
 int16_t g_encoderValue = 0;
-int16_t g_encoderRead = 0;
+int16_t g_encoderRead = 120;
 static int BPM = 120;
 void rotary_onButtonClick() 
 {
@@ -53,7 +53,7 @@ void rotary_loop()
 
   //lets see if anything changed
   int16_t encoderDelta = rotaryEncoder.encoderChanged();
-  g_encoderRead = rotaryEncoder.readEncoder();
+  // g_encoderRead = rotaryEncoder.readEncoder();
   //optionally we can ignore whenever there is no change
   if (encoderDelta == 0) return;
   
@@ -111,7 +111,6 @@ int contador;
 void IRAM_ATTR onTimer()
 {
   g_milisecs ++;
-  
 }
 
 void setup() 
@@ -190,11 +189,12 @@ void machineMotorcontrol(int BPM)
   }
 } 
 
-void drawProgressBar(int BPM) 
+void drawProgressBar() 
 {
+  
   //Serial.print(">> ");
   //Serial.println(contador);
-   
+   g_encoderRead = rotaryEncoder.readEncoder();
   // desenha a progress bar
   /*
    * drawProgressBar(x, y, width, height, value);
@@ -211,7 +211,6 @@ void drawProgressBar(int BPM)
   // configura o alinhamento do texto que será escrito
   //nesse caso alinharemos o texto ao centro
   screen.setTextAlignment(TEXT_ALIGN_CENTER);
-   
   //escreve o texto de porcentagem
   /*
    * drawString(x,y,text);
@@ -221,7 +220,7 @@ void drawProgressBar(int BPM)
      p3: string --> texto que será exibido
   */
   screen.drawString(64, 15, "BPM");
-  screen.drawString(64, 30, String(BPM));
+  screen.drawString(64, 30, String(g_encoderRead));
  
   //se o contador está em zero, escreve a string "valor mínimo"
   // if(contador == 0){
@@ -283,7 +282,7 @@ void loop() {
     //  counter > 100 ? counter = 0 : counter = counter;  
   
     //desenha a progress bar
-    drawProgressBar(g_encoderRead);
+    drawProgressBar();
   
     //exibe na tela o que foi configurado até então.
     screen.display();
