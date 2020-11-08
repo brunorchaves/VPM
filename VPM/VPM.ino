@@ -19,7 +19,6 @@
 //Display--> 
 //SCL             D22
 //SDA             D21
-
 /*
 connecting Rotary encoder
 CLK (A pin) - to any microcontroler intput pin with interrupt -> in this example pin 32
@@ -45,12 +44,23 @@ void rotary_onButtonClick()
 }
 void rotary_loop() 
 {
+  
   //first lets handle rotary encoder button click
   if (rotaryEncoder.currentButtonState() == BUT_RELEASED) {
     //we can process it here or call separate function like:
     rotary_onButtonClick();
+    //clickCounter = 0;
   }
 
+  // if (rotaryEncoder.currentButtonState() == BUT_PUSHED)
+  // {
+  //   clickCounter ++;
+  // }
+
+  // if(clickCounter >= 10)
+  // {
+  //   decanso ^= true;
+  // }
   //lets see if anything changed
   int16_t encoderDelta = rotaryEncoder.encoderChanged();
   // g_encoderRead = rotaryEncoder.readEncoder();
@@ -69,9 +79,9 @@ void rotary_loop()
     //now we need current value
     int16_t encoderValue = rotaryEncoder.readEncoder();
     //process new value. Here is simple output.
-    Serial.print("Value: ");
-    Serial.print(encoderValue);
-    Serial.println(" - Click to select");
+    // Serial.print("Value: ");
+    // Serial.print(encoderValue);
+    // Serial.println(" - Click to select");
     
   }
   
@@ -116,7 +126,7 @@ void IRAM_ATTR onTimer()
 void setup() 
 {
   //Serial Monitor-----------------------------
-  Serial.begin (9600);
+  //Serial.begin (9600);
   //Timer--------------------------------------
   timer = timerBegin(0,80,true);//Timer 0, MWDT clock period = 12,5 s * TIMGn_Tx_WDT_CLK_PRESCALE -> 12.5ns*80 ->1u sec, countUP 
   timerAttachInterrupt(timer,&onTimer, true); //edge (not level) triggered
@@ -130,7 +140,7 @@ void setup()
   rotaryEncoder.begin();
   rotaryEncoder.setup([]{rotaryEncoder.readEncoder_ISR();});
   //optionally we can set boundaries and if values should cycle or not
-  rotaryEncoder.setBoundaries(40, 240, false); //minValue, maxValue, cycle values (when max go to min and vice versa)
+  rotaryEncoder.setBoundaries(40, 300, false); //minValue, maxValue, cycle values (when max go to min and vice versa)
 
   //Display-------------------------------------
   // Inicializa o objeto que controlará o que será exibido na tela
@@ -237,7 +247,8 @@ enum
 	State_ChangeBPM,
 };
 void loop() {
-  
+  static int clickCounter = 0;
+  static bool decanso = false;
   static int state = 0;
   static int currentEncoder = 1;
   static int previousEncoder = 1;
@@ -287,13 +298,35 @@ void loop() {
     //exibe na tela o que foi configurado até então.
     screen.display();
   }
-  machineMotorcontrol(BPM);
+  if (digitalRead(25) == HIGH) {
+    //we can process it here or call separate function like:
+    clickCounter = 0;
+  }
 
-  Serial.print(g_encoderRead);
-  Serial.print(" ");
-  Serial.print(BPM);
-  Serial.print(" ");
-  Serial.println(counter);
+  else if (digitalRead(25) == LOW)
+  {
+    clickCounter ++;
+  }
+
+  if(clickCounter >= 30)
+  {
+    decanso ^= true;
+  }
+  if(decanso== false)
+  {
+    machineMotorcontrol(BPM);
+  }
+  else
+  {
+    digitalWrite(g_motor,LOW);
+  }
+  
+
+  // Serial.print(g_encoderRead);
+  // Serial.print(" ");
+  // Serial.print(BPM);
+  // Serial.print(" ");
+  // Serial.println(counter);
   if (millis()>20000) 
     rotaryEncoder.enable ();
 }
